@@ -57,41 +57,10 @@ module.exports.addChat = async (req, res, next) => {
       });
     }
 
-    const contacts = await chat.aggregate([
-      { $match: { "userId": ObjectId(userId) } },
+    const resultUsingUserIdCol = await chat.aggregate([
       {
-        $lookup: {
-          from: "users",
-          localField: "chatId",
-          foreignField: "_id",
-          as: "chat_users"
-        }
+        $match: { "userId": ObjectId(userId) }
       },
-      {
-        $project: {
-          _id: 1,
-          chat_users: {
-            username: 1,
-            email: 1,
-            avatarImage: 1,
-            _id: 1
-          }
-        }
-      }
-    ])
-    return res.json(contacts);
-  } catch (ex) {
-    next(ex);
-  }
-};
-
-
-module.exports.getChat = async (req, res, next) => {
-  try {
-    const { userId } = req['query'];
-    if (!userId) return res.json({ msg: "Required params are missing" });
-    const result = await chat.aggregate([
-      { $match: { "userId": ObjectId(userId) } },
       {
         $lookup: {
           from: "users",
@@ -113,7 +82,93 @@ module.exports.getChat = async (req, res, next) => {
       }
     ])
 
-    res.json(result);
+    const resultUsingChatIdCol = await chat.aggregate([
+      {
+        $match: { "chatId": ObjectId(userId) }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "chat_users"
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          chat_users: {
+            _id: 1,
+            username: 1,
+            avatarImage: 1,
+            email: 1
+          }
+        }
+      }
+    ])
+    const combineResults = [...resultUsingUserIdCol, ...resultUsingChatIdCol]
+    res.json(combineResults);
+  } catch (ex) {
+    next(ex);
+  }
+};
+
+
+module.exports.getChat = async (req, res, next) => {
+  try {
+    const { userId } = req['query'];
+    if (!userId) return res.json({ msg: "Required params are missing" });
+    const resultUsingUserIdCol = await chat.aggregate([
+      {
+        $match: { "userId": ObjectId(userId) }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "chatId",
+          foreignField: "_id",
+          as: "chat_users"
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          chat_users: {
+            _id: 1,
+            username: 1,
+            avatarImage: 1,
+            email: 1
+          }
+        }
+      }
+    ])
+
+    const resultUsingChatIdCol = await chat.aggregate([
+      {
+        $match: { "chatId": ObjectId(userId) }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "chat_users"
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          chat_users: {
+            _id: 1,
+            username: 1,
+            avatarImage: 1,
+            email: 1
+          }
+        }
+      }
+    ])
+    const combineResults = [...resultUsingUserIdCol, ...resultUsingChatIdCol]
+    res.json(combineResults);
 
   } catch (ex) {
     next(ex);

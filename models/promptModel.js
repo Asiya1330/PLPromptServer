@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 
 const PromptSchema = mongoose.Schema(
@@ -28,11 +27,9 @@ const PromptSchema = mongoose.Schema(
         },
         midjourney_pflink: {
             type: String,
-            required: true,
         },
         prompt_ins: {
             type: String,
-            required: true,
         },
         userId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -74,7 +71,49 @@ const PromptSchema = mongoose.Schema(
         trending_points: { type: Number },
         categories: {
             type: Array,
-        }
+        },
+        gpt_cat: {
+            type: String,
+        },
+        testing_prompt: {
+            type: String,
+        },
+        engine: {
+            type: String,
+        },
+        preview_output: {
+            type: String,
+        },
+        preview_input: {
+            type: String,
+        },
+        sd_model: {
+            type: String,
+        },
+        sd_sampler: {
+            type: String,
+        },
+        sd_img_width: {
+            type: Number,
+        },
+        sd_img_height: {
+            type: Number,
+        },
+        sd_steps: {
+            type: Number,
+        },
+        sd_cfg_scale: {
+            type: Number,
+        },
+        sd_seed: {
+            type: String,
+        },
+        sd_clip_guide: {
+            type: Boolean,
+        },
+        sd_neg_prompt: {
+            type: String,
+        },
     },
     {
         timestamps: true,

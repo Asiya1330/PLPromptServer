@@ -1,4 +1,4 @@
-const { insertPrompt, getPrompts, getTrendingPromptsBasedOnHourlyFactor, fetchNonApprovedPrompts, approvePrompt, markFeatured } = require("../controllers/promptController");
+const { insertPrompt, getPrompts, getTrendingPromptsBasedOnHourlyFactor, fetchNonApprovedPrompts, approvePrompt, markFeatured, getBadgesByUserID } = require("../controllers/promptController");
 const { insertPromptLikes, getPromptLikeByUserId } = require('../controllers/promptLikesController')
 const { insertPromptPurchase, getPromptPurchaseByUserId } = require('../controllers/promptPurchase')
 const { insertPromptViews, getPromptViewByUserId } = require('../controllers/promptviewsController')
@@ -10,7 +10,8 @@ router.get("/getprompts/", getPrompts);
 router.get("/gettrendingprompt/", getTrendingPromptsBasedOnHourlyFactor)
 router.get("/getnonapprovedprompts/", fetchNonApprovedPrompts)
 router.post("/approvePrompt", approvePrompt);
-router.post("/markfeature",markFeatured);
+router.post("/markfeature", markFeatured);
+router.get("/getbadgesbyuserid", getBadgesByUserID);
 
 router.post("/likeprompt/", insertPromptLikes);
 router.get("/likeprompt/:userId/:promptId", getPromptLikeByUserId);

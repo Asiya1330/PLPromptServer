@@ -11,7 +11,7 @@ const multer = require('multer')
 const upload = multer({ dest: 'uploads/' })
 const cron = require('node-cron')
 const userRoute = require("./routes/user");
-const { addStatusColumnInPrompts } = require('./cronJobs/weekly-monthly-daily')
+const { addStatusColumnInPrompts, calculateRankings, addPurchaseRecordtoPetio } = require('./cronJobs/weekly-monthly-daily')
 
 const app = express();
 const socket = require("socket.io");
@@ -75,13 +75,18 @@ app.post("/api/uploadfile", upload.single('file'), async (req, res) => {
   return res.json(data)
 })
 
-
-// cron.schedule("*/40 * * * * *", function () {
-//   console.log("---------------------");
-//   // calculateRankings('daily')
-//   addStatusColumnInPrompt();
-//   console.log("running a task every 40 seconds");
+// cron.schedule('*/40 * * * * *', async () => {
+//   console.log("running a task every 40 sec");
+//   addPurchaseRecordtoPetio();
 // });
+// cron.schedule('*/40 * * * * *', async () => {
+cron.schedule('0 0 * * *', async () => {
+
+  await calculateRankings('weekly')
+  await calculateRankings('monthly')
+  // addStatusColumnInPrompt();
+  console.log("running a task every 24 hours");
+});
 
 const server = app.listen(PORT, () =>
   console.log(`Server started on ${PORT}`)

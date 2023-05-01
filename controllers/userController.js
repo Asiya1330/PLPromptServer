@@ -3,8 +3,8 @@ const User = require("../models/userModel");
 const Followers = require('../models/followers');
 const bcrypt = require("bcrypt");
 const ObjectId = require("mongoose/lib/types/objectid");
-const promptModel = require("../models/promptModel");
 const userModel = require("../models/userModel");
+const { NodemailerTransporter } = require("../nodemailer/nodemailer");
 
 module.exports.login = async (req, res, next) => {
   try {
@@ -17,6 +17,30 @@ module.exports.login = async (req, res, next) => {
       return res.json({ msg: "Incorrect Email or Password", status: false });
     delete user.password;
     return res.json({ status: true, user });
+  } catch (ex) {
+    next(ex);
+  }
+};
+
+module.exports.sendverificationemail = async (req, res, next) => {
+  try {
+    const { emailToVerify } = req.body;
+    if (!emailToVerify) return res.json({ msg: "please provide emailToVerify", status: false });
+
+    const emailCheck = await User.findOne({ email: emailToVerify });
+    if (emailCheck) return res.json({ msg: "Email already used", status: false });
+
+    let mailOptions = {
+      from: 'gagabooboo987@gmail.com',
+      to: emailToVerify,
+      subject: 'Verify your email',
+      html: `<p>Click the link below to verify your email:</p><p><a href="http://localhost:3000/?token=abc123">Verify email</a></p>`
+    };
+
+    const response = await NodemailerTransporter.sendMail(mailOptions);
+    if (response.status) return res.json({ msg: "Succesfully sent email" });
+    return res.json({ error: response })
+
   } catch (ex) {
     next(ex);
   }
@@ -192,14 +216,12 @@ module.exports.addFollower = async (req, res, next) => {
 
       return res.json(addfollower);
     }
-    res.json(findFollower[0]);
+    res.json({ msg: "already follwing" });
   }
   catch (err) {
     next(err);
   }
 }
-
-
 
 module.exports.getLikesViewsPurchasesAndRank = async (req, res, next) => {
   try {
@@ -215,8 +237,6 @@ module.exports.getLikesViewsPurchasesAndRank = async (req, res, next) => {
           as: "prompts"
         }
       },
-      //followinga nd followercount
-
       {
         $lookup: {
           from: "followers",

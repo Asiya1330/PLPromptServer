@@ -24,18 +24,24 @@
 const Prompt = require('../models/promptModel');
 const Like = require('../models/LikesModel')
 const Purchase = require('../models/purchaseModel')
-const View = require('../models/viewModel')
+const View = require('../models/viewModel');
+const purchaseModel = require('../models/purchaseModel');
 const now = new Date();
-async function calculateRankings(type) {
 
+async function calculateRankings(type) {
+    console.log('====================================');
+    console.log(type, 'starts');
+    console.log('====================================');
     let startDate, endDate;
     if (type === 'daily') {
         startDate = (new Date(now.getFullYear(), now.getMonth(), now.getDate())).toISOString();
         endDate = (new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)).toISOString();
-    } else if (type === 'weekly') {
+    }
+    else if (type === 'weekly') {
         startDate = (new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)).toISOString();
         endDate = (new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)).toISOString();
-    } else if (type === 'monthly') {
+    }
+    else if (type === 'monthly') {
         startDate = (new Date(now.getFullYear(), now.getMonth(), 1)).toISOString();
         endDate = (new Date(now.getFullYear(), now.getMonth() + 1, 1)).toISOString();
     }
@@ -67,14 +73,23 @@ async function calculateRankings(type) {
             }
         })
         const score = views * 1 + likes * 2 + purchases * 4;
+        if (type === 'monthly') {
+            const res = await Prompt.updateOne({ _id: prompt._id }, {
+                monthlyScore: score
+            })
+            console.log('====================================');
+            console.log(res, 'for monthly with score:', score);
+            console.log('====================================');
+        }
+        if (type === 'weekly') {
+            const res = await Prompt.updateOne({ _id: prompt._id }, {
+                weeklyScore: score
+            })
+            console.log('====================================');
+            console.log(res, 'for weekly with score:', score);
+            console.log('====================================');
+        }
 
-        console.log(score, prompt.name);
-        // await Ranking.create({
-        //     product_id: product.id,
-        //     type,
-        //     score,
-        //     date: now,
-        // });
     }
 }
 
@@ -115,8 +130,31 @@ const addStatusColumnInPrompts = async () => {
     }
 }
 
+const addPurchaseRecordtoPetio = async () => {
+    // const data = await Prompt.updateMany({ userId: "642f16baea34422083f8e6a2" }, {
+    //     categories: [
+    //         "3D",
+    //         "Accessory",
+    //         "Animal",
+    //         "Anime",
+    //         "Avatar",
+    //         "Unique Style",
+    //         "Vehicle",
+    //         "Wallpaper",
+    //     ]
+    // })
+
+    // const data = await Prompt.find({ userId: "642f16baea34422083f8e6a2" })
+   
+    // await data.map(async (prompt) => {
+    //     const result = await purchaseModel.insertMany({ promptId: prompt._id, buyerId: '642f16deea34422083f8e6a8' })
+    //     console.log(result, 'result');
+    // })
+}
+
 module.exports = {
     calculateRankings,
     migrationOfPrompts,
-    addStatusColumnInPrompts
+    addStatusColumnInPrompts,
+    addPurchaseRecordtoPetio
 };

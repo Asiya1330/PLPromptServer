@@ -1,21 +1,15 @@
 const ObjectId = require("mongoose/lib/types/objectid");
 const Prompts = require("../models/promptModel");
 const moment = require('moment');
+const purchaseModel = require("../models/purchaseModel");
 
 module.exports.getPrompts = async (req, res, next) => {
-    /**
-     * newewst find({userId: profileOwnerId})sort({createdAt:1})
-     * popular sort({purchaseCount:1})
-     * featured {feature:true}
-     * hottest sort({views:1})
-     */
     try {
         const { condition, profileOwnerId, type } = req.query;
+        console.log(condition);
+
         if (!condition) return res.status(400).send({ message: 'Condition is required' });
         if (condition === 'newest-type' && !type) return res.status(400).send({ message: 'Type is required' });
-        // if (condition === 'popular-by-id' && !type) return res.status(400).send({ message: 'Type is required' });
-        // if (condition === 'newest-by-id' && !profileOwnerId) return res.status(400).send({ message: 'profileOwnerId is required' });
-
         let prompts = [];
         switch (condition) {
             case 'newest-by-id':
@@ -29,6 +23,11 @@ module.exports.getPrompts = async (req, res, next) => {
                 break;
             case 'popular':
                 prompts = await Prompts.aggregate([
+                    {
+                        $match: {
+                            status: 'approved',
+                        }
+                    },
                     {
                         $addFields: {
                             totalScore: { $sum: ["$likes", "$views", "$purchaseCount"] }
@@ -87,15 +86,18 @@ module.exports.markFeatured = async (req, res, next) => {
 
 module.exports.approvePrompt = async (req, res, next) => {
     try {
-        let { id, timeInHour } = req['body'];
+        let { id, timeInHour, selectedCategories } = req['body'];
         if (!id) throw new Error('prompt id is required');
         // if (process.env.NODE_APP_INSTANCE = '0' || NODE_ENV != 'production') {
         // }
-        const prompts = await Prompts.updateOne({ _id: req['body'].id }, { status: "ready-to-release" });
+        const prompts = await Prompts.updateOne({ _id: req['body'].id }, {
+            status: "ready-to-release",
+            categories: selectedCategories
+        });
         if (!timeInHour) timeInHour = 1;
         const timeInMS = timeInHour * 60000 * 60
         setTimeout(async () => {
-            console.log(`releasing prompt after ${timeInHour} mins`);
+            console.log(`releasing prompt after ${timeInHour} hour(s)`);
             await Prompts.updateOne({ _id: req['body'].id }, { status: "approved" });
         }, timeInMS)
 
@@ -108,42 +110,9 @@ module.exports.approvePrompt = async (req, res, next) => {
 
 module.exports.insertPrompt = async (req, res, next) => {
     try {
-        let { type,
-            description,
-            price,
-            name,
-            prompt,
-            profileLink,
-            promptIns,
-            userId,
-            images, status } = req['body'];
+        if (!req['body'].status) req['body'].status = 'pending';
 
-        if (!status) status = 'pending';
-
-        if (!type
-            || !description
-            || !price
-            || !name
-            || !prompt
-            || !profileLink
-            || !promptIns
-            || !userId
-            || !images
-        )
-            throw new Error('Required args are missing');
-
-        const data = await Prompts.create({
-            type,
-            description,
-            price,
-            name,
-            prompt,
-            midjourney_pflink: profileLink,
-            prompt_ins: promptIns,
-            userId,
-            images,
-            status
-        });
+        const data = await Prompts.create(req['body']);
         if (data) return res.json(data);
         else return res.json({ msg: "Failed to add prompt to the database" });
     } catch (ex) {
@@ -256,7 +225,10 @@ module.exports.getTrendingPromptsBasedOnHourlyFactor = async (req, res, next) =>
                     likes: 1,
                     createdAt: 1,
                     status: 1,
-                    isFeature: 1
+                    isFeature: 1,
+                    weeklyScore: 1,
+                    monthlyScore: 1,
+                    categories: 1
                 }
             }
         ]);
@@ -271,3 +243,50 @@ module.exports.getTrendingPromptsBasedOnHourlyFactor = async (req, res, next) =>
         next(ex);
     }
 };
+
+module.exports.getBadgesByUserID = async (req, res, next) => {
+    try {
+        const { ownerId } = req['query'];
+        const result = await purchaseModel.aggregate([
+            {
+                $lookup: {
+                    from: "prompts",
+                    localField: "promptId",
+                    foreignField: "_id",
+                    as: "prompt"
+                }
+            },
+            {
+                $unwind: "$prompt"
+            },
+            {
+                $match: {
+                    "prompt.userId": ObjectId(ownerId)
+                }
+            },
+            {
+                $unwind: "$prompt.categories"
+            },
+            {
+                $group: {
+                    _id: "$prompt.categories",
+                    purchaseCount: {
+                        $sum: 1
+                    }
+                }
+            },
+            {
+                $match: {
+                    purchaseCount: {
+                        $gt: 5
+                    }
+                }
+            }
+        ]);
+
+        res.status(200).json(result)
+    } catch (ex) {
+        console.log(ex);
+        next(ex);
+    }
+}

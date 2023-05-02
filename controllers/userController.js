@@ -4,43 +4,26 @@ const Followers = require('../models/followers');
 const bcrypt = require("bcrypt");
 const ObjectId = require("mongoose/lib/types/objectid");
 const userModel = require("../models/userModel");
-const { NodemailerTransporter } = require("../nodemailer/nodemailer");
+const { sendverificationemail } = require("../nodemailer/emailTemplates/verifyemailTemplate");
+const promptModel = require("../models/promptModel");
+const purchaseModel = require("../models/purchaseModel");
+const viewModel = require("../models/viewModel");
+const LikesModel = require("../models/LikesModel");
+const messageModel = require("../models/messageModel");
+const chat = require("../models/chat");
 
 module.exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user)
-      return res.json({ msg: "Incorrect Email or Password", status: false });
+    if (!user) return res.json({ msg: "Incorrect Email or Password", status: false });
+    if (!user.status || user?.status === 'pending') return res.json({ msg: "User is not verified", status: false });
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid)
-      return res.json({ msg: "Incorrect Email or Password", status: false });
+    if (!isPasswordValid) return res.json({ msg: "Incorrect Email or Password", status: false });
+
     delete user.password;
+
     return res.json({ status: true, user });
-  } catch (ex) {
-    next(ex);
-  }
-};
-
-module.exports.sendverificationemail = async (req, res, next) => {
-  try {
-    const { emailToVerify } = req.body;
-    if (!emailToVerify) return res.json({ msg: "please provide emailToVerify", status: false });
-
-    const emailCheck = await User.findOne({ email: emailToVerify });
-    if (emailCheck) return res.json({ msg: "Email already used", status: false });
-
-    let mailOptions = {
-      from: 'gagabooboo987@gmail.com',
-      to: emailToVerify,
-      subject: 'Verify your email',
-      html: `<p>Click the link below to verify your email:</p><p><a href="http://localhost:3000/?token=abc123">Verify email</a></p>`
-    };
-
-    const response = await NodemailerTransporter.sendMail(mailOptions);
-    if (response.status) return res.json({ msg: "Succesfully sent email" });
-    return res.json({ error: response })
-
   } catch (ex) {
     next(ex);
   }
@@ -76,7 +59,11 @@ module.exports.register = async (req, res, next) => {
       params
     );
     delete user.password;
-
+    req['params'] = {
+      emailToVerify: otherProps.email,
+      id: user._id
+    }
+    await sendverificationemail(req);
     return res.json({ status: true, user });
 
   } catch (ex) {
@@ -149,6 +136,7 @@ module.exports.findOneUserById = async (req, res, next) => {
       "username",
       "avatarImage",
       "_id",
+      "status"
     ]);
     return res.json(user);
   } catch (ex) {
@@ -163,7 +151,7 @@ module.exports.getFollowersandFollowingCount = async (req, res, next) => {
     const { profileOwnerId } = req['query'];
     if (!profileOwnerId) return res.json({ msg: "required parameters are missings", status: false });
 
-    const getfollowersAndFolowingCound = await userModel.aggregate([
+    const getfollowersAndFolowingCount = await userModel.aggregate([
       { $match: { "_id": ObjectId(profileOwnerId) } },
       {
         $lookup: {
@@ -191,8 +179,7 @@ module.exports.getFollowersandFollowingCount = async (req, res, next) => {
       }
     ])
 
-
-    return res.json(addfollower);
+    return res.json(getfollowersAndFolowingCount);
   }
   catch (err) {
     next(err);
@@ -285,5 +272,37 @@ module.exports.getLikesViewsPurchasesAndRank = async (req, res, next) => {
   }
   catch (err) {
     next(err);
+  }
+}
+
+module.exports.updateUserStatus = async (req, res, next) => {
+  try {
+    const { _id } = req['body'];
+    const result = await User.updateOne({ _id }, {
+      status: 'verified'
+    })
+
+    return res.json(result);
+  }
+  catch (err) {
+    next(err)
+  }
+}
+
+module.exports.deleteAllRecords = async (req, res, next) => {
+  try {
+    const result1 = await promptModel.deleteMany({})
+    const result2 = await purchaseModel.deleteMany({})
+    const result3 = await viewModel.deleteMany({})
+    const result4 = await LikesModel.deleteMany({})
+    const result5 = await messageModel.deleteMany({})
+    const result6 = await Followers.deleteMany({})
+    const result7 = await chat.deleteMany({})
+
+
+    return res.json({ msg: 'deleted succesfully', record: { result1, result2, result3, result4, result5, result6, result7 } });
+  }
+  catch (err) {
+    next(err)
   }
 }

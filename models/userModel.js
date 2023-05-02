@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema({
   },
   badges: {
     type: Array
+  },
+  status: {
+    type: String,
+    enum: ['verified', 'pending'],
+    default: 'pending',
+    required: true
   }
 },
   {

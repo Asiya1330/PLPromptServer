@@ -2,6 +2,8 @@ const ObjectId = require("mongoose/lib/types/objectid");
 const Prompts = require("../models/promptModel");
 const moment = require('moment');
 const purchaseModel = require("../models/purchaseModel");
+const cron = require('node-cron');
+const { approvalCronJob } = require("../cronJobs/scehduleCronJobs");
 
 module.exports.getPrompts = async (req, res, next) => {
     try {
@@ -88,20 +90,29 @@ module.exports.approvePrompt = async (req, res, next) => {
     try {
         let { id, timeInHour, selectedCategories } = req['body'];
         if (!id) throw new Error('prompt id is required');
+        console.log(process.env.NODE_APP_INSTANCE, process.env.NODE_ENV);
         // if (process.env.NODE_APP_INSTANCE = '0' || NODE_ENV != 'production') {
         // }
-        const prompts = await Prompts.updateOne({ _id: req['body'].id }, {
+        const prompt = await Prompts.findOneAndUpdate({ _id: req['body'].id }, {
             status: "ready-to-release",
             categories: selectedCategories
         });
-        if (!timeInHour) timeInHour = 1;
-        const timeInMS = timeInHour * 60000 * 60
-        setTimeout(async () => {
-            console.log(`releasing prompt after ${timeInHour} hour(s)`);
-            await Prompts.updateOne({ _id: req['body'].id }, { status: "approved" });
-        }, timeInMS)
 
-        res.json(prompts);
+        if (!timeInHour) timeInHour = 1;
+
+        const now = new Date();
+        const oneHourLater = new Date(now.getTime() + (timeInHour * 60 * 60 * 1000));
+        oneHourLater.setSeconds(0);
+        oneHourLater.setMilliseconds(0);
+        const jobHour = oneHourLater.getHours();
+        const jobMinute = oneHourLater.getMinutes();
+        console.log(`Prompt will get approved at ${oneHourLater.getHours()}:${oneHourLater.getMinutes()}`);
+
+        const cronExpr = `${jobMinute} ${jobHour} * * *`;
+
+        approvalCronJob(cronExpr, id, prompt);
+
+        res.json(prompt);
     } catch (ex) {
         next(ex);
     }

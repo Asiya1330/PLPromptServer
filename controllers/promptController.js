@@ -301,3 +301,16 @@ module.exports.getBadgesByUserID = async (req, res, next) => {
         next(ex);
     }
 }
+
+module.exports.updatePrompt = async (req, res, next) => {
+    try {
+        const { _id, ...otherParams } = req['body']
+        const response = await Prompts.findOneAndUpdate({ _id }, {
+            ...otherParams
+        })
+        res.send(response);
+    }
+    catch (err) {
+        next(err)
+    }
+}

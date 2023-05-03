@@ -12,14 +12,18 @@ const upload = multer({ dest: 'uploads/' })
 const cron = require('node-cron')
 const userRoute = require("./routes/user");
 require("./cronJobs/scehduleCronJobs");
+const stripeRoute = require("./routes/stripeRoute")
 const { addStatusColumnInPrompts, calculateRankings, addPurchaseRecordtoPetio } = require('./cronJobs/weekly-monthly-daily')
+const path = require('path');
 
 const app = express();
 const socket = require("socket.io");
+const { RedirectCallback } = require('./controllers/stripe');
 require("dotenv").config();
 
 app.use(cors());
 app.use(express.json());
+
 const PORT = process.env.PORT || 5000;
 
 mongoose
@@ -41,7 +45,9 @@ app.get('/', (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/prompt", promptRoute)
-app.use("/api/user", userRoute)
+app.use("/api/user", userRoute);
+app.use("/api/payment", stripeRoute)
+// app.get('/oauth/callback', RedirectCallback);
 
 const s3 = new AWS.S3({
   accessKeyId: process.env.aws_access_key_id,
@@ -65,11 +71,15 @@ app.post("/api/uploadfile", upload.single('file'), async (req, res) => {
   const fileKey = `${org}-${env}-${userId}/${Date.now()}-${file.originalname}`
 
   const fileStream = fs.createReadStream(file.path);
-
+  const fileExtension = path.extname(req.file.originalname);
+  const supportedExt = 'png,jpg,jpeg';
+  const contentType = fileExtension === 'jpg' || fileExtension === 'jpeg' ? 'image/jpeg' : 'image/png';
+  console.log(contentType);
   const params = {
     Bucket: bucketName,
     Key: fileKey,
     Body: fileStream,
+    ContentType: contentType
   };
 
   const data = await s3.upload(params).promise();

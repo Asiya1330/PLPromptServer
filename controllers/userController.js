@@ -306,3 +306,20 @@ module.exports.deleteAllRecords = async (req, res, next) => {
     next(err)
   }
 }
+
+
+module.exports.UpdateUser = async (req, res, next) => {
+  try {
+    console.log(req.body);
+    const { _id, ...otherParams } = req['body']
+    console.log(_id, otherParams, 'lol');
+
+    if (!_id) return res.send({ msg: "id is required" })
+    const response = await userModel.findOneAndUpdate({ _id }, otherParams)
+
+    res.send(response);
+  }
+  catch (err) {
+    next(err)
+  }
+}

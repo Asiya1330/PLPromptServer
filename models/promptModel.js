@@ -21,6 +21,9 @@ const PromptSchema = mongoose.Schema(
             required: true,
             unique: true,
         },
+        ownerStripeId: {
+            type: String
+        },
         prompt: {
             type: String,
             required: true,

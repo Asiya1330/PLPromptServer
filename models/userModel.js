@@ -42,6 +42,9 @@ const userSchema = new mongoose.Schema({
     enum: ['verified', 'pending'],
     default: 'pending',
     required: true
+  },
+  ownerStripeId: {
+    type: String
   }
 },
   {

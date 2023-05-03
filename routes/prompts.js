@@ -1,4 +1,4 @@
-const { insertPrompt, getPrompts, getTrendingPromptsBasedOnHourlyFactor, fetchNonApprovedPrompts, approvePrompt, markFeatured, getBadgesByUserID } = require("../controllers/promptController");
+const { insertPrompt, getPrompts, getTrendingPromptsBasedOnHourlyFactor, fetchNonApprovedPrompts, approvePrompt, markFeatured, getBadgesByUserID, updatePrompt } = require("../controllers/promptController");
 const { insertPromptLikes, getPromptLikeByUserId } = require('../controllers/promptLikesController')
 const { insertPromptPurchase, getPromptPurchaseByUserId } = require('../controllers/promptPurchase')
 const { insertPromptViews, getPromptViewByUserId } = require('../controllers/promptviewsController')
@@ -21,5 +21,7 @@ router.get("/promptview/:userId/:promptId", getPromptViewByUserId);
 
 router.post("/purchaseprompt/", insertPromptPurchase);
 router.get("/purchaseprompt/:userId/:promptId", getPromptPurchaseByUserId);
+
+router.post("/update", updatePrompt);
 
 module.exports = router;

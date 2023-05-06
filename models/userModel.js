@@ -45,6 +45,9 @@ const userSchema = new mongoose.Schema({
   },
   ownerStripeId: {
     type: String
+  },
+  stripeCustomerId: {
+    type: String
   }
 },
   {

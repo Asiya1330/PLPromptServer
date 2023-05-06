@@ -4,6 +4,7 @@ const moment = require('moment');
 const purchaseModel = require("../models/purchaseModel");
 const cron = require('node-cron');
 const { approvalCronJob } = require("../cronJobs/scehduleCronJobs");
+const { PaymentLink } = require("./stripe");
 
 module.exports.getPrompts = async (req, res, next) => {
     try {
@@ -123,7 +124,13 @@ module.exports.insertPrompt = async (req, res, next) => {
     try {
         if (!req['body'].status) req['body'].status = 'pending';
 
+        const paymentlink = await PaymentLink(req, res, next);
+        console.log(paymentlink.url);
+        if (!paymentlink.url) res.send({ msg: "error creating payment link while adding prompt" })
+
+        req['body'].payment_link = paymentlink.url;
         const data = await Prompts.create(req['body']);
+
         if (data) return res.json(data);
         else return res.json({ msg: "Failed to add prompt to the database" });
     } catch (ex) {
@@ -239,7 +246,8 @@ module.exports.getTrendingPromptsBasedOnHourlyFactor = async (req, res, next) =>
                     isFeature: 1,
                     weeklyScore: 1,
                     monthlyScore: 1,
-                    categories: 1
+                    categories: 1,
+                    payment_link: 1
                 }
             }
         ]);

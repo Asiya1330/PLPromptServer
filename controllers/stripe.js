@@ -7,143 +7,107 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 
 
 module.exports.CheckoutSession = async (req, res) => {
-    const { userId } = req['body'];
-    const customer = await stripe.customers.create({
-        metadata: {
-            userId: userId,
-            cart: JSON.stringify(req.body.cartItems),
-        },
-    });
+    try {
+        let { userId, userEmail, userName, stripeCustomerId, promptProduct } = req['body'];
+        const promptOwner = await userModel.findOne({ _id: promptProduct.userId });
+        console.log(promptOwner.email);
+        if (!promptOwner?.ownerStripeId) return res.send({ msg: 'seller of this product is not connected to stripe Oauth' })
 
-    const line_items = req.body.cartItems.map((item) => {
-        return {
+        if (!stripeCustomerId) {
+            const customer = await stripe.customers.create({
+                email: userEmail,
+                name: userName,
+                metadata: {
+                    userId: userId,
+                    cart: JSON.stringify(req.body.cartItems),
+                },
+            });
+            stripeCustomerId = customer.id;
+            const updateUser = await userModel.findOneAndUpdate({ _id: userId },
+                { stripeCustomerId: customer.id },
+                { returnOriginal: false });
+            console.log(updateUser);
+        }
+        const priceInCents = promptProduct.price.split('$')[0];
+        const line_items = [{
             price_data: {
                 currency: "usd",
                 product_data: {
-                    name: item.name,
-                    images: [item.image],
-                    description: item.desc,
+                    name: promptProduct.name,
+                    images: promptProduct.images,
+                    description: promptProduct.description,
                     metadata: {
-                        id: item.id,
+                        id: promptProduct._id,
                     },
                 },
-                unit_amount: item.price * 100,
+                unit_amount: priceInCents * 100,
             },
-            quantity: item.cartQuantity,
-        };
-    });
+            quantity: 1
+        }]
 
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        shipping_address_collection: {
-            allowed_countries: ["US", "CA", "KE"],
-        },
-        shipping_options: [
-            {
-                shipping_rate_data: {
-                    type: "fixed_amount",
-                    fixed_amount: {
-                        amount: 0,
-                        currency: "usd",
-                    },
-                    display_name: "Free shipping",
-                    // Delivers between 5-7 business days
-                    delivery_estimate: {
-                        minimum: {
-                            unit: "business_day",
-                            value: 5,
-                        },
-                        maximum: {
-                            unit: "business_day",
-                            value: 7,
-                        },
-                    },
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            line_items,
+            mode: "payment",
+            customer: stripeCustomerId,
+            payment_intent_data: {
+                transfer_data: {
+                    destination: promptOwner.ownerStripeId, // Replace with the ID of the destination account
                 },
+                application_fee_amount: 100
             },
-            {
-                shipping_rate_data: {
-                    type: "fixed_amount",
-                    fixed_amount: {
-                        amount: 1500,
-                        currency: "usd",
-                    },
-                    display_name: "Next day air",
-                    // Delivers in exactly 1 business day
-                    delivery_estimate: {
-                        minimum: {
-                            unit: "business_day",
-                            value: 1,
-                        },
-                        maximum: {
-                            unit: "business_day",
-                            value: 1,
-                        },
-                    },
-                },
-            },
-        ],
-        phone_number_collection: {
-            enabled: true,
-        },
-        line_items,
-        mode: "payment",
-        customer: customer.id,
-        success_url: `${process.env.CLIENT_URL}/checkout-success`,
-        cancel_url: `${process.env.CLIENT_URL}/cart`,
-    });
-
-    res.send({ url: session.url });
+            success_url: `${process.env.Remote_Base}/prompt/${encodeURIComponent(promptProduct.name)}`,
+            cancel_url: `${process.env.Remote_Base}/failed-payment`,
+        });
+        res.send({ url: session.url, stripeCustomerId });
+    }
+    catch (err) {
+        console.log(err);
+        return res.send({ msg: err })
+    }
 }
 
 module.exports.PaymentLink = async (req, res, next) => {
     try {
-        const { userId, name, description, images, price } = req['body'];
-        const priceInCents = price.split('$')[0];
+        // const { userId, name, description, images, price, payment_link } = req['body'];
+        if (!req['body'].userId || !req['body'].name || !req['body'].description || !req['body'].images || !req['body'].price) return res.send({ msg: 'required params are missing' })
+        if (!req['body'].payment_link) {
 
-        if (!userId || !name || !description || !images || !price) return res.send({ msg: 'required params are missing' })
+            const priceInCents = req['body'].price.split('$')[0];
 
-        const data = await userModel.findOne({ _id: userId });
-        
-        if (!data?.ownerStripeId) return res.send({ msg: 'seller of this product is not connected to stripe Oauth' })
+            const data = await userModel.findOne({ _id: req['body'].userId });
+            if (!data?.ownerStripeId) return res.send({ msg: 'seller of this product is not connected to stripe Oauth' })
 
-        const product = await stripe.products.create({
-            name,
-            description,
-            images: images.length ? images : ['https://promptbase-files.s3.amazonaws.com/promptbase-dev-645036e52e2323b5ef654b1d/1682978804697-avatar-diffusion1.png']
-        })
+            console.log(req['body'].images.length, req['body'].images);
+            const product = await stripe.products.create({
+                name: req['body'].name,
+                description: req['body'].description,
+                images: req['body'].images.length ? req['body'].images : ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPzMemoV1boDZEE_CMFcBm4_dOhrT7Qy4b-Q&usqp=CAU']
+            })
 
-        const priceStripe = await stripe.prices.create({
-            unit_amount: priceInCents * 100,
-            currency: 'usd',
-            product: product.id,
-            tax_behavior: 'inclusive'
-        })
-        // const account = await stripe.accounts.update(
-        //     data.ownerStripeId,
-        //     {
-        //         tos_acceptance: {
-        //             service_agreement: 'recipient',
-        //         },
-        //     }
-        // );
-        // console.log('====================================');
-        // console.log(account, 'lolol');
-        console.log('====================================');
-        const paymentLink = await stripe.paymentLinks.create({
-            line_items: [
-                {
-                    price: priceStripe.id,
-                    quantity: 1,
+            const priceStripe = await stripe.prices.create({
+                unit_amount: priceInCents * 100,
+                currency: 'usd',
+                product: product.id,
+                tax_behavior: 'inclusive'
+            })
+            const paymentLink = await stripe.paymentLinks.create({
+                line_items: [
+                    {
+                        price: priceStripe.id,
+                        quantity: 1,
+                    },
+                ],
+                transfer_data: {
+                    destination: data.ownerStripeId
+                    // destination: 'acct_1N3e5TPTRjOAGUVA',
                 },
-            ],
-            transfer_data: {
-                destination: data.ownerStripeId
-                // destination: 'acct_1N3e5TPTRjOAGUVA',
-            },
-        });
+            });
 
-        console.log(paymentLink);
-        res.send(paymentLink)
+            console.log(paymentLink);
+            return paymentLink
+        }
+        return { msg: 'Payment Link already attached' }
     }
     catch (err) {
         console.log(err);

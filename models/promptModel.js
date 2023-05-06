@@ -21,7 +21,7 @@ const PromptSchema = mongoose.Schema(
             required: true,
             unique: true,
         },
-        ownerStripeId: {
+        payment_link: {
             type: String
         },
         prompt: {

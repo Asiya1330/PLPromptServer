@@ -44,7 +44,7 @@ module.exports.CheckoutSession = async (req, res) => {
             },
             quantity: 1
         }]
-
+        const percentagePrice = Math.ceil((3 / 100) * priceInCents * 100)
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items,
@@ -54,7 +54,7 @@ module.exports.CheckoutSession = async (req, res) => {
                 transfer_data: {
                     destination: promptOwner.ownerStripeId, // Replace with the ID of the destination account
                 },
-                application_fee_amount: 100
+                application_fee_amount: percentagePrice
             },
             success_url: `${process.env.Remote_Base}/prompt/${encodeURIComponent(promptProduct.name)}`,
             cancel_url: `${process.env.Remote_Base}/failed-payment`,

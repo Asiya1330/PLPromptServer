@@ -22,6 +22,9 @@ const app = express();
 const socket = require("socket.io");
 const { RedirectCallback } = require('./controllers/stripe');
 const bodyParser = require('body-parser');
+const promptModel = require('./models/promptModel');
+const userModel = require('./models/userModel');
+const purchaseModel = require('./models/purchaseModel');
 require("dotenv").config();
 
 
@@ -51,9 +54,20 @@ const org = process.env.org;
 const env = process.env.env;
 const bucketName = process.env.bucket_name;
 
-const fulfillOrder = (lineItems) => {
-  // TODO: fill me in
-  console.log("Fulfilling order", lineItems);
+const fulfillOrder = async (lineItems, customerEmail) => {
+  try {
+    const PromptDetails = await promptModel.findOneAndUpdate({ name: lineItems.data[0].description }, {
+      $inc: { purchaseCount: 1 }
+    });
+    const customerDetails = await userModel.findOne({ email: customerEmail })
+    const InsertPayment = await purchaseModel.create({ promptId: PromptDetails._id, buyerId: customerDetails._id });
+
+    console.log('InsertPrompt', InsertPayment);
+    console.log("Fulfilling order", lineItems.data[0].description, customerEmail);
+  }
+  catch (err) {
+    console.log('ErrorOcuured:', err);
+  }
 }
 
 app.post('/webhook', bodyParser.raw({ type: "application/json" }), async (request, response) => {
@@ -61,10 +75,10 @@ app.post('/webhook', bodyParser.raw({ type: "application/json" }), async (reques
   let event;
   try {
     event = stripe.webhooks.constructEvent(request.body, sig, process.env.WEBHOOK_SECRET_KEY);
-    console.log('✅ Success:', event.id);
 
     let customerEmail;
     let sellerStripeId
+    let lineItems
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
@@ -74,29 +88,22 @@ app.post('/webhook', bodyParser.raw({ type: "application/json" }), async (reques
       case 'checkout.session.completed':
         const checkoutSession = event.data.object;
         customerEmail = checkoutSession.customer_details.email;
+        const sessionsWithLineItems = await stripe.checkout.sessions.retrieve(
+          event.data.object.id,
+          {
+            expand: ['line_items'],
+          }
+        );
+        lineItems = sessionsWithLineItems.line_items;
+        await fulfillOrder(lineItems, customerEmail);
+        console.log(lineItems);
       default:
         console.log(`${event.type} event occur`);
     }
 
-    // if (event.type === 'checkout.session.completed') {
-    // Retrieve the session. If you require line items in the response, you may include them by expanding line_items.
-    // const sessionsWithLineItems = await stripe.checkout.sessions.retrieve(
-    //   event.data.object.id,
-    //   {
-    //     expand: ['line_items'],
-    //   }
-    // );
-    // const lineItems = sessionsWithLineItems.line_items;
-    // console.log(lineItems);
-
-    // Retrieve the Customer object associated with the CheckoutSession
-
-    // Fulfill the purchase...
-    // fulfillOrder(lineItems);
-    // }
-    console.log(customerEmail, sellerStripeId);
     response.status(200).end();
-  } catch (err) {
+  }
+  catch (err) {
     console.log(err);
     return response.status(400).send(`Webhook Error: ${err.message}`);
   }

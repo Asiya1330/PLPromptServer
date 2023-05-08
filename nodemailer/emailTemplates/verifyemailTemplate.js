@@ -23,7 +23,7 @@ module.exports.sendverificationemail = async (req) => {
 module.exports.verifyEmail = (newUserID) => `
 <p>Click the link below to verify your email:</p>
 <p>
-    <a href="http://localhost:3000/?token=${newUserID}">
+    <a href="${process.env.Remote_Base}/?token=${newUserID}">
         Verify email
     </a>
 </p>

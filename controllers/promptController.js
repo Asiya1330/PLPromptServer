@@ -5,6 +5,7 @@ const purchaseModel = require("../models/purchaseModel");
 const cron = require('node-cron');
 const { approvalCronJob } = require("../cronJobs/scehduleCronJobs");
 const { PaymentLink } = require("./stripe");
+const constants = require("../models/constants");
 
 module.exports.getPrompts = async (req, res, next) => {
     try {
@@ -100,14 +101,22 @@ module.exports.approvePrompt = async (req, res, next) => {
         });
 
         if (!timeInHour) timeInHour = 1;
+        const getLatestApproveTimeRecord = await constants.find({ _id: '645ea31e5b517fa41f888d3b' });
+        const getLatestApproveTime = getLatestApproveTimeRecord[0].latest_approve_time
 
-        const now = new Date();
+        let now = getLatestApproveTime;
+        //check if older than go with new date
+        if (getLatestApproveTime.getTime() <= new Date().getTime()) {
+            now = new Date();
+        }
+
         const oneHourLater = new Date(now.getTime() + (timeInHour * 60 * 60 * 1000));
         oneHourLater.setSeconds(0);
         oneHourLater.setMilliseconds(0);
         const jobHour = oneHourLater.getHours();
         const jobMinute = oneHourLater.getMinutes();
-        console.log(`Prompt will get approved at ${oneHourLater.getHours()}:${oneHourLater.getMinutes()}`);
+        await constants.findByIdAndUpdate({ _id: '645ea31e5b517fa41f888d3b' }, { latest_approve_time: oneHourLater }, { returnOriginal: false });
+        console.log(`Prompt will get approved at ${jobHour}:${jobMinute}`);
 
         const cronExpr = `${jobMinute} ${jobHour} * * *`;
 

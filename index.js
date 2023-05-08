@@ -25,6 +25,7 @@ const bodyParser = require('body-parser');
 const promptModel = require('./models/promptModel');
 const userModel = require('./models/userModel');
 const purchaseModel = require('./models/purchaseModel');
+const { sendEmailToSeller } = require('./nodemailer/emailTemplates/sendPurchaseEmailToSeller');
 require("dotenv").config();
 
 
@@ -61,7 +62,7 @@ const fulfillOrder = async (lineItems, customerEmail) => {
     });
     const customerDetails = await userModel.findOne({ email: customerEmail })
     const InsertPayment = await purchaseModel.create({ promptId: PromptDetails._id, buyerId: customerDetails._id });
-
+    await sendEmailToSeller(customerDetails, PromptDetails);
     console.log('InsertPrompt', InsertPayment);
     console.log("Fulfilling order", lineItems.data[0].description, customerEmail);
   }

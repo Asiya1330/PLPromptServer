@@ -40,11 +40,11 @@ module.exports.CheckoutSession = async (req, res) => {
                         id: promptProduct._id,
                     },
                 },
-                unit_amount: priceInCents * 100,
+                unit_amount: Math.ceil(priceInCents * 100),
             },
             quantity: 1
         }]
-        const percentagePrice = Math.ceil((3 / 100) * priceInCents * 100)
+        const percentagePrice = Math.ceil((15 / 100) * priceInCents * 100)
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
             line_items,
@@ -67,9 +67,9 @@ module.exports.CheckoutSession = async (req, res) => {
     }
 }
 
+//not using below
 module.exports.PaymentLink = async (req, res, next) => {
     try {
-        // const { userId, name, description, images, price, payment_link } = req['body'];
         if (!req['body'].userId || !req['body'].name || !req['body'].description || !req['body'].images || !req['body'].price) return res.send({ msg: 'required params are missing' })
         if (!req['body'].payment_link) {
 
@@ -100,7 +100,6 @@ module.exports.PaymentLink = async (req, res, next) => {
                 ],
                 transfer_data: {
                     destination: data.ownerStripeId
-                    // destination: 'acct_1N3e5TPTRjOAGUVA',
                 },
             });
 
@@ -164,8 +163,6 @@ module.exports.RedirectCallback = async (req, res, next) => {
 
 module.exports.CreateSellerAcc = async (req, res, next) => {
     try {
-
-        const { email } = req['body'];
         const account = await stripe.accounts.create({
             country: 'US',
             type: 'custom',

@@ -1,6 +1,7 @@
 const ObjectId = require("mongoose/lib/types/objectid");
 const chat = require("../models/chat");
 const Messages = require("../models/messageModel");
+const { sendEmailToChatUser } = require("../nodemailer/emailTemplates/sendEmailToChatUser");
 
 module.exports.getMessages = async (req, res, next) => {
   try {
@@ -174,3 +175,18 @@ module.exports.getChat = async (req, res, next) => {
     next(ex);
   }
 };
+
+
+module.exports.SendEmailToChat = async (req, res, next) => {
+  try {
+    const { chat, sender, message } = req['body'];
+    const { statusCode, err } = await sendEmailToChatUser(message, chat, sender);
+    if (statusCode === 200) return res.send({ msg: 'Successfully send Email' });
+    else return res.send({ msg: 'Error while sending email', err });
+
+  }
+  catch (err) {
+    console.log(err);
+    next(err)
+  }
+}

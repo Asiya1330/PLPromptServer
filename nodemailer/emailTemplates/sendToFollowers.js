@@ -50,5 +50,5 @@ module.exports.sendNewlyAddedPromptsToFollwers = async (prompt) => {
 
 module.exports.newPromptReleased = (name) => `
 <h1>New Prompt "${name}" released</h1>
-<a href='http://localhost:3000/prompt/${encodeURIComponent(name)}'>Go check it out</a>
+<a href='${process.env.Remote_Base}/prompt/${encodeURIComponent(name)}'>Go check it out</a>
 `

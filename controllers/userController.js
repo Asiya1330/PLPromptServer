@@ -32,7 +32,7 @@ module.exports.login = async (req, res, next) => {
 module.exports.register = async (req, res, next) => {
   try {
     const { password, ...otherProps } = req.body;
-
+    if (!otherProps.username || !otherProps.email) return res.json({ msg: "Email or Username is missing", status: false });
     const usernameCheck = await User.findOne({ username: otherProps.username });
 
     if (usernameCheck) return res.json({ msg: "Username already used", status: false });
@@ -59,11 +59,13 @@ module.exports.register = async (req, res, next) => {
       params
     );
     delete user.password;
-    req['params'] = {
-      emailToVerify: otherProps.email,
-      id: user._id
+    if (otherProps.status !== 'verified') {
+      req['params'] = {
+        emailToVerify: otherProps.email,
+        id: user._id
+      }
+      await sendverificationemail(req);
     }
-    await sendverificationemail(req);
     return res.json({ status: true, user });
 
   } catch (ex) {
@@ -318,6 +320,17 @@ module.exports.UpdateUser = async (req, res, next) => {
     const response = await userModel.findOneAndUpdate({ _id }, otherParams)
 
     res.send(response);
+  }
+  catch (err) {
+    next(err)
+  }
+}
+
+module.exports.fetchUserByEmail = async (req, res, next) => {
+  try {
+    const { email } = req['query'];
+    const data = await userModel.findOne({ email: email })
+    return res.send(data)
   }
   catch (err) {
     next(err)

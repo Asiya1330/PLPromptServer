@@ -15,7 +15,7 @@ require("./cronJobs/scehduleCronJobs");
 const stripeRoute = require("./routes/stripeRoute");
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-const { addStatusColumnInPrompts, calculateRankings, addPurchaseRecordtoPetio } = require('./cronJobs/weekly-monthly-daily')
+const { calculateRankings, makeStripeIdAndcustomeridTonull, addStatusColumnInPrompts, addPurchaseRecordtoPetio } = require('./cronJobs/weekly-monthly-daily')
 const path = require('path');
 
 const app = express();
@@ -156,21 +156,20 @@ app.post("/api/uploadfile", upload.single('file'), async (req, res) => {
 
 // function lol() {
 //   const a ='123';
-//   const b = 'wew';
-//   const c = a+b
-//   console.log(c);
 //   setTimeout(() => {
 //     console.log('task stopped after 1 sec');
 //     task.stop();
 //   }, 1000)
 // }
 
-// cron.schedule('*/40 * * * * *', async () => {
+// cron.schedule('*/20 * * * * *', async () => {
+//   await makeStripeIdAndcustomeridTonull()
+// })
+
 cron.schedule('0 0 * * *', async () => {
 
   await calculateRankings('weekly')
   await calculateRankings('monthly')
-  // addStatusColumnInPrompt();
   console.log("running a task every 24 hours");
 });
 

@@ -26,6 +26,7 @@ const Like = require('../models/LikesModel')
 const Purchase = require('../models/purchaseModel')
 const View = require('../models/viewModel');
 const purchaseModel = require('../models/purchaseModel');
+const userModel = require('../models/userModel');
 const now = new Date();
 
 async function calculateRankings(type) {
@@ -152,9 +153,15 @@ const addPurchaseRecordtoPetio = async () => {
     // })
 }
 
+const makeStripeIdAndcustomeridTonull = async () =>{
+    await userModel.updateMany({}, { $set: { stripeCustomerId: null, ownerStripeId: null } });
+    console.log('makeStripeIdAndcustomeridTonull done');
+}
+
 module.exports = {
     calculateRankings,
     migrationOfPrompts,
     addStatusColumnInPrompts,
-    addPurchaseRecordtoPetio
+    addPurchaseRecordtoPetio,
+    makeStripeIdAndcustomeridTonull
 };

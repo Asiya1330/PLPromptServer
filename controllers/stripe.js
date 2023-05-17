@@ -9,9 +9,9 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 module.exports.CheckoutSession = async (req, res) => {
     try {
         let { userId, userEmail, userName, stripeCustomerId, promptProduct } = req['body'];
+
         const promptOwner = await userModel.findOne({ _id: promptProduct.userId });
-        console.log(promptOwner.email);
-        if (!promptOwner?.ownerStripeId) return res.send({ msg: 'seller of this product is not connected to stripe Oauth' })
+        if (!(promptOwner?.ownerStripeId)) return res.send({ msg: 'Seller of this product is not connected to Stripe-Express-Connect' })
 
         if (!stripeCustomerId) {
             const customer = await stripe.customers.create({

@@ -17,3 +17,4 @@ router.get("/logout/:id", logOut);
 router.get("/user/:_id", findOneUserById)
 
 module.exports = router;
+

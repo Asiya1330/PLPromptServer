@@ -29,7 +29,10 @@ const { sendEmailToSeller } = require('./nodemailer/emailTemplates/sendPurchaseE
 require("dotenv").config();
 
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 50000;
+const org = process.env.org;
+const env = process.env.env;
+const bucketName = process.env.bucket_name;
 
 mongoose
   .connect(process.env.MONGO_URL, {
@@ -50,10 +53,6 @@ const s3 = new AWS.S3({
   secretAccessKey: process.env.aws_secret_access_key,
   region: process.env.aws_region
 });
-
-const org = process.env.org;
-const env = process.env.env;
-const bucketName = process.env.bucket_name;
 
 const fulfillOrder = async (lineItems, customerEmail) => {
   try {

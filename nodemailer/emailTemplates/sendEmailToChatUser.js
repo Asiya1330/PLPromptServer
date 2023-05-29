@@ -10,12 +10,12 @@ module.exports.sendEmailToChatUser = async (message, chat, sender) => {
         };
 
         await NodemailerTransporter.sendMail(mailOptions);
-        return { statusCode: 200, err: null }
+        return { statusCode: 200 }
 
     }
     catch (err) {
         console.log(err);
-        return { statusCode: 400, err }
+        return { statusCode: 400 }
     }
 }
 

@@ -180,9 +180,9 @@ module.exports.getChat = async (req, res, next) => {
 module.exports.SendEmailToChat = async (req, res, next) => {
   try {
     const { chat, sender, message } = req['body'];
-    const { statusCode, err } = await sendEmailToChatUser(message, chat, sender);
+    const { statusCode } = await sendEmailToChatUser(message, chat, sender);
     if (statusCode === 200) return res.send({ msg: 'Successfully send Email' });
-    else return res.send({ msg: 'Error while sending email', err });
+    else return res.send({ msg: 'Error while sending email' });
 
   }
   catch (err) {

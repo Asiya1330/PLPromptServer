@@ -5,5 +5,8 @@ module.exports.NodemailerTransporter = nodemailer.createTransport({
         user: `promptsheaven@gmail.com`,
         pass: `vgicblqtjhtqswlv`
     },
+    tls: {
+        rejectUnauthorized:false
+    },
     secure: true
 });
